@@ -1,8 +1,9 @@
 import os
 import json
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict
 
+from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
     ApplicationBuilder,
@@ -12,6 +13,8 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
+
+load_dotenv()
 
 # -------------------------
 # CONFIG
@@ -191,10 +194,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
     user_data = get_user_data(user.id)
 
-    # ==================== CHECK JOIN ====================
     if data == "check_join":
         if await is_user_in_channel(context, user.id):
-            # Add welcome bonus
             if user_data["bonus_earned"] == 0:
                 user_data["balance"] += 2.00
                 user_data["bonus_earned"] += 2.00
@@ -226,7 +227,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         return
 
-    # ==================== HOME ====================
     if data == "home":
         if await is_user_in_channel(context, user.id):
             user_data = get_user_data(user.id)
@@ -255,7 +255,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         return
 
-    # ==================== BONUS ====================
     if data == "bonus":
         await query.edit_message_text(
             f"💰 <b>Bonus Rewards</b>\n\n"
@@ -279,7 +278,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ==================== DAILY BONUS ====================
     if data == "daily_bonus":
         user_data = get_user_data(user.id)
         last_bonus = context.user_data.get(f"last_bonus_{user.id}")
@@ -302,7 +300,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ==================== REFER ====================
     if data == "refer":
         referral_link = f"https://t.me/{context.bot.username}?start={user.id}"
         await query.edit_message_text(
@@ -326,13 +323,11 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ==================== COPY REFER LINK ====================
     if data == "copy_refer_link":
         referral_link = f"https://t.me/{context.bot.username}?start={user.id}"
         await query.answer(f"Link copied: {referral_link}", show_alert=True)
         return
 
-    # ==================== TASKS ====================
     if data == "tasks":
         task_buttons = []
         for task in TASKS_LIST:
@@ -355,7 +350,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ==================== TASK COMPLETION ====================
     for task in TASKS_LIST:
         if data == task["id"]:
             if task["id"] in context.user_data.get(f"completed_tasks_{user.id}", []):
@@ -380,7 +374,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-    # ==================== SET WALLET ====================
     if data == "set_wallet":
         await query.edit_message_text(
             f"💳 <b>Set Wallet Address</b>\n\n"
@@ -393,7 +386,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["waiting_for_wallet"] = True
         return
 
-    # ==================== WITHDRAW ====================
     if data == "withdraw":
         if not user_data["wallet_address"]:
             await query.answer(
@@ -429,7 +421,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ==================== WITHDRAWAL PROCESSING ====================
     if data.startswith("withdraw_"):
         if not user_data["wallet_address"]:
             await query.answer("❌ Wallet not set!", show_alert=True)
@@ -471,7 +462,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ==================== STATS ====================
     if data == "stats":
         total_earned = user_data["bonus_earned"] + user_data["referral_earnings"]
         total_withdrawn = sum(w["amount"] for w in user_data["withdrawal_history"])
@@ -493,7 +483,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle wallet address input"""
     user = update.effective_user
     if not user:
         return
