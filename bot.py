@@ -16,33 +16,22 @@ from telegram.ext import (
 
 load_dotenv()
 
-# -------------------------
-# CONFIG
-# -------------------------
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-CHANNEL_USERNAME = os.getenv("CHANNEL_USERNAME", "@yourchannel")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
+TOKEN = "8666880705:AAE---8lcGWRglptaLAje-Bm8Dzgv3an8Xg"
+CHANNEL_USERNAME = "@abusouban"
+ADMIN_ID = 7767175259
 DB_FILE = "users_data.json"
 
-# -------------------------
-# DATABASE HELPERS
-# -------------------------
 def load_users_db() -> Dict:
-    """Load users database from JSON file"""
     if os.path.exists(DB_FILE):
         with open(DB_FILE, "r") as f:
             return json.load(f)
     return {}
 
-
 def save_users_db(data: Dict):
-    """Save users database to JSON file"""
     with open(DB_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
-
 def get_user_data(user_id: int) -> Dict:
-    """Get user data or create new"""
     db = load_users_db()
     user_id_str = str(user_id)
 
@@ -63,33 +52,25 @@ def get_user_data(user_id: int) -> Dict:
 
     return db[user_id_str]
 
-
 def update_user_data(user_id: int, data: Dict):
-    """Update user data"""
     db = load_users_db()
     db[str(user_id)] = data
     save_users_db(db)
 
-
 def add_referral(referrer_id: int, referred_user_id: int):
-    """Add referral and credit earnings"""
     referrer_data = get_user_data(referrer_id)
     referred_data = get_user_data(referred_user_id)
 
     referrer_data["total_referrals"] += 1
-    referrer_data["referral_earnings"] += 0.50  # $0.50 per referral
+    referrer_data["referral_earnings"] += 0.50
     referrer_data["balance"] += 0.50
 
     referred_data["referrer_id"] = referrer_id
-    referred_data["bonus_earned"] += 1.00  # $1.00 bonus for joining via referral
+    referred_data["bonus_earned"] += 1.00
 
     update_user_data(referrer_id, referrer_data)
     update_user_data(referred_user_id, referred_data)
 
-
-# -------------------------
-# MENU LAYOUTS
-# -------------------------
 MAIN_MENU = [
     [
         InlineKeyboardButton("💰 Bonus", callback_data="bonus"),
@@ -115,17 +96,14 @@ TASKS_LIST = [
     {"id": "task_5", "name": "Share with Friends", "reward": 1.00},
 ]
 
-# -------------------------
-# HELPERS
-# -------------------------
 async def is_user_in_channel(context: ContextTypes.DEFAULT_TYPE, user_id: int) -> bool:
     try:
         member = await context.bot.get_chat_member(CHANNEL_USERNAME, user_id)
         status = member.status
         return status in ["member", "administrator", "creator"]
-    except Exception:
+    except Exception as e:
+        print(f"Channel check error: {e}")
         return False
-
 
 async def show_home_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -163,13 +141,11 @@ async def show_home_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(MAIN_MENU),
     )
 
-
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user:
         return
 
-    # Check if referred
     args = context.args
     if args and args[0].isdigit():
         referrer_id = int(args[0])
@@ -179,14 +155,12 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await show_home_menu(update, context)
 
-
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     if not query:
         return
 
     await query.answer()
-
     user = query.from_user
     if not user:
         return
@@ -266,22 +240,14 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(
                 [
-                    [
-                        InlineKeyboardButton(
-                            "📅 Daily Bonus",
-                            callback_data="daily_bonus",
-                        )
-                    ],
-                ]
-                + BACK_BUTTON
+                    [InlineKeyboardButton("📅 Daily Bonus", callback_data="daily_bonus")],
+                ] + BACK_BUTTON
             ),
         )
         return
 
     if data == "daily_bonus":
-        user_data = get_user_data(user.id)
         last_bonus = context.user_data.get(f"last_bonus_{user.id}")
-
         if last_bonus == datetime.now().date():
             await query.answer("❌ Already claimed today!", show_alert=True)
             return
@@ -312,13 +278,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(
                 [
-                    [
-                        InlineKeyboardButton(
-                            "📋 Copy Link", callback_data="copy_refer_link"
-                        )
-                    ],
-                ]
-                + BACK_BUTTON
+                    [InlineKeyboardButton("📋 Copy Link", callback_data="copy_refer_link")],
+                ] + BACK_BUTTON
             ),
         )
         return
@@ -332,12 +293,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         task_buttons = []
         for task in TASKS_LIST:
             task_buttons.append(
-                [
-                    InlineKeyboardButton(
-                        f"✅ {task['name']} (${task['reward']})",
-                        callback_data=task["id"],
-                    )
-                ]
+                [InlineKeyboardButton(f"✅ {task['name']} (${task['reward']})", callback_data=task["id"])]
             )
         task_buttons.extend(BACK_BUTTON)
 
@@ -388,9 +344,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data == "withdraw":
         if not user_data["wallet_address"]:
-            await query.answer(
-                "❌ Please set your wallet address first!", show_alert=True
-            )
+            await query.answer("❌ Please set your wallet address first!", show_alert=True)
             return
 
         if user_data["balance"] < 1.0:
@@ -415,8 +369,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("$5.00", callback_data="withdraw_5")],
                     [InlineKeyboardButton("$10.00", callback_data="withdraw_10")],
                     [InlineKeyboardButton("Withdraw All", callback_data="withdraw_all")],
-                ]
-                + BACK_BUTTON
+                ] + BACK_BUTTON
             ),
         )
         return
@@ -481,7 +434,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-
 async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user:
@@ -511,7 +463,6 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             reply_markup=InlineKeyboardMarkup(MAIN_MENU),
         )
 
-
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🤖 <b>Bot Commands</b>\n\n"
@@ -522,23 +473,23 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML",
     )
 
-
 def main():
     if not TOKEN:
         raise ValueError("TELEGRAM_BOT_TOKEN is missing!")
 
+    print("🤖 Starting Telegram Bot...")
+    print(f"✅ Token loaded successfully")
+    print(f"📍 Channel: {CHANNEL_USERNAME}")
+    
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CallbackQueryHandler(handle_callback))
-    app.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message)
-    )
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
 
-    print("🤖 Bot started...")
+    print("🤖 Bot is running now... Press Ctrl+C to stop")
     app.run_polling()
-
 
 if __name__ == "__main__":
     main()
